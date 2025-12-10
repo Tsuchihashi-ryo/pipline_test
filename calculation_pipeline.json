@@ -1,0 +1,227 @@
+{
+  "components": {
+    "comp-add": {
+      "executorLabel": "exec-add",
+      "inputDefinitions": {
+        "parameters": {
+          "num1": {
+            "parameterType": "NUMBER_DOUBLE"
+          },
+          "num2": {
+            "parameterType": "NUMBER_DOUBLE"
+          }
+        }
+      },
+      "outputDefinitions": {
+        "parameters": {
+          "Output": {
+            "parameterType": "NUMBER_DOUBLE"
+          }
+        }
+      }
+    },
+    "comp-multiply": {
+      "executorLabel": "exec-multiply",
+      "inputDefinitions": {
+        "parameters": {
+          "num1": {
+            "parameterType": "NUMBER_DOUBLE"
+          },
+          "num2": {
+            "parameterType": "NUMBER_DOUBLE"
+          }
+        }
+      },
+      "outputDefinitions": {
+        "parameters": {
+          "Output": {
+            "parameterType": "NUMBER_DOUBLE"
+          }
+        }
+      }
+    },
+    "comp-subtract": {
+      "executorLabel": "exec-subtract",
+      "inputDefinitions": {
+        "parameters": {
+          "num1": {
+            "parameterType": "NUMBER_DOUBLE"
+          },
+          "num2": {
+            "parameterType": "NUMBER_DOUBLE"
+          }
+        }
+      },
+      "outputDefinitions": {
+        "parameters": {
+          "Output": {
+            "parameterType": "NUMBER_DOUBLE"
+          }
+        }
+      }
+    }
+  },
+  "deploymentSpec": {
+    "executors": {
+      "exec-add": {
+        "container": {
+          "args": [
+            "--executor_input",
+            "{{$}}",
+            "--function_to_execute",
+            "add"
+          ],
+          "command": [
+            "sh",
+            "-c",
+            "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location 'kfp==2.15.2' '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"' && \"$0\" \"$@\"\n",
+            "sh",
+            "-ec",
+            "program_path=$(mktemp -d)\n\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\n_KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
+            "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import *\n\ndef add(\n    num1: float,\n    num2: float,\n) -> float:\n    \"\"\"Adds two numbers.\"\"\"\n    return num1 + num2\n\n"
+          ],
+          "image": "python:3.9"
+        }
+      },
+      "exec-multiply": {
+        "container": {
+          "args": [
+            "--executor_input",
+            "{{$}}",
+            "--function_to_execute",
+            "multiply"
+          ],
+          "command": [
+            "sh",
+            "-c",
+            "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location 'kfp==2.15.2' '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"' && \"$0\" \"$@\"\n",
+            "sh",
+            "-ec",
+            "program_path=$(mktemp -d)\n\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\n_KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
+            "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import *\n\ndef multiply(\n    num1: float,\n    num2: float,\n) -> float:\n    \"\"\"Multiplies two numbers.\"\"\"\n    return num1 * num2\n\n"
+          ],
+          "image": "python:3.9"
+        }
+      },
+      "exec-subtract": {
+        "container": {
+          "args": [
+            "--executor_input",
+            "{{$}}",
+            "--function_to_execute",
+            "subtract"
+          ],
+          "command": [
+            "sh",
+            "-c",
+            "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location 'kfp==2.15.2' '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"' && \"$0\" \"$@\"\n",
+            "sh",
+            "-ec",
+            "program_path=$(mktemp -d)\n\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\n_KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
+            "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import *\n\ndef subtract(\n    num1: float,\n    num2: float,\n) -> float:\n    \"\"\"Subtracts two numbers.\"\"\"\n    return num1 - num2\n\n"
+          ],
+          "image": "python:3.9"
+        }
+      }
+    }
+  },
+  "pipelineInfo": {
+    "description": "A pipeline that multiplies and adds two numbers, then subtracts the results.",
+    "name": "calculation-pipeline"
+  },
+  "root": {
+    "dag": {
+      "tasks": {
+        "add": {
+          "cachingOptions": {
+            "enableCache": true
+          },
+          "componentRef": {
+            "name": "comp-add"
+          },
+          "inputs": {
+            "parameters": {
+              "num1": {
+                "componentInputParameter": "num1"
+              },
+              "num2": {
+                "componentInputParameter": "num2"
+              }
+            }
+          },
+          "taskInfo": {
+            "name": "add"
+          }
+        },
+        "multiply": {
+          "cachingOptions": {
+            "enableCache": true
+          },
+          "componentRef": {
+            "name": "comp-multiply"
+          },
+          "inputs": {
+            "parameters": {
+              "num1": {
+                "componentInputParameter": "num1"
+              },
+              "num2": {
+                "componentInputParameter": "num2"
+              }
+            }
+          },
+          "taskInfo": {
+            "name": "multiply"
+          }
+        },
+        "subtract": {
+          "cachingOptions": {
+            "enableCache": true
+          },
+          "componentRef": {
+            "name": "comp-subtract"
+          },
+          "dependentTasks": [
+            "add",
+            "multiply"
+          ],
+          "inputs": {
+            "parameters": {
+              "num1": {
+                "taskOutputParameter": {
+                  "outputParameterKey": "Output",
+                  "producerTask": "multiply"
+                }
+              },
+              "num2": {
+                "taskOutputParameter": {
+                  "outputParameterKey": "Output",
+                  "producerTask": "add"
+                }
+              }
+            }
+          },
+          "taskInfo": {
+            "name": "subtract"
+          }
+        }
+      }
+    },
+    "inputDefinitions": {
+      "parameters": {
+        "num1": {
+          "defaultValue": 10.0,
+          "isOptional": true,
+          "parameterType": "NUMBER_DOUBLE"
+        },
+        "num2": {
+          "defaultValue": 5.0,
+          "isOptional": true,
+          "parameterType": "NUMBER_DOUBLE"
+        }
+      }
+    }
+  },
+  "schemaVersion": "2.1.0",
+  "sdkVersion": "kfp-2.15.2"
+}

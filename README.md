@@ -38,3 +38,90 @@ python run.py
 ```
 
 送信後、スクリプトはパイプラインの実行を監視できるGoogle CloudコンソールへのURLを出力します。
+
+---
+
+## APIとしてパイプラインを呼び出す (Cloud Functions経由)
+
+このセクションでは、HTTP POSTリクエストを送信することでパイプラインをトリガーできるAPIエンドポイントとして、Cloud Functionをデプロイする方法について説明します。
+
+### 前提条件
+
+-   `gcloud` CLIがインストールされ、認証済みであること。
+-   APIを有効にする:
+    ```bash
+    gcloud services enable cloudfunctions.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com
+    ```
+-   Cloud FunctionがVertex AIを呼び出すための権限を持つサービスアカウント。**Vertex AI ユーザー** (`roles/aiplatform.user`) ロールを持つサービスアカウントを使用することをお勧めします。
+
+### デプロイ手順
+
+1.  **パイプラインのコンパイルとコピー**:
+    プロジェクトのルートディレクトリから、最新のパイプライン定義をコンパイルし、Cloud Functionのディレクトリにコピーします。これにより、APIが常に最新のパイプラインを使用するようになります。
+    ```bash
+    # (プロジェクトのルートディレクトリで実行)
+    python pipeline.py
+    cp calculation_pipeline.json cloud_function/
+    ```
+
+2.  **デプロイディレクトリへの移動**:
+    `cloud_function` ディレクトリに移動します。
+    ```bash
+    cd cloud_function
+    ```
+
+3.  **環境変数の設定**:
+    デプロイコマンドで使用する環境変数を設定します。`<YOUR_PROJECT_ID>`、`<YOUR_REGION>`、`<YOUR_PIPELINE_ROOT_GCS_PATH>`、`<YOUR_SERVICE_ACCOUNT_EMAIL>` を独自の値に置き換えてください。
+    ```bash
+    export GCP_PROJECT_ID="<YOUR_PROJECT_ID>"
+    export GCP_REGION="<YOUR_REGION>"
+    export PIPELINE_ROOT_GCS_PATH="<YOUR_PIPELINE_ROOT_GCS_PATH>"
+    export SERVICE_ACCOUNT_EMAIL="<YOUR_SERVICE_ACCOUNT_EMAIL>"
+    ```
+
+4.  **Cloud Functionのデプロイ**:
+    以下の`gcloud`コマンドを実行して、関数をデプロイします。
+    ```bash
+    gcloud functions deploy trigger-calculation-pipeline \
+      --gen2 \
+      --runtime=python39 \
+      --region=${GCP_REGION} \
+      --source=. \
+      --entry-point=trigger_pipeline \
+      --trigger-http \
+      --allow-unauthenticated \
+      --service-account=${SERVICE_ACCOUNT_EMAIL} \
+      --set-env-vars=GCP_PROJECT_ID=${GCP_PROJECT_ID},GCP_REGION=${GCP_REGION},PIPELINE_ROOT_GCS_PATH=${PIPELINE_ROOT_GCS_PATH}
+    ```
+    デプロイが完了すると、`https://...` 形式のトリガーURLが出力されます。これがAPIエンドポイントです。
+
+### APIの呼び出し
+
+デプロイしたAPIは、`curl`や他のHTTPクライアントを使用して呼び出すことができます。
+
+1.  **エンドポイントURLの設定**:
+    前のステップで出力されたトリガーURLを環境変数に設定します。
+    ```bash
+    export API_ENDPOINT_URL="<YOUR_TRIGGER_URL>"
+    ```
+
+2.  **APIのテスト**:
+    `num1`と`num2`をJSONペイロードに含めてPOSTリクエストを送信します。
+    ```bash
+    curl -X POST "${API_ENDPOINT_URL}" \
+      -H "Content-Type: application/json" \
+      -d '{
+            "num1": 50,
+            "num2": 12
+          }'
+    ```
+
+3.  **成功の応答**:
+    成功すると、以下のようなJSON応答が返ってきます。
+    ```json
+    {
+      "dashboard_uri": "https://console.cloud.google.com/vertex-ai/locations/...",
+      "job_name": "projects/...",
+      "message": "Pipeline job submitted successfully."
+    }
+    ```

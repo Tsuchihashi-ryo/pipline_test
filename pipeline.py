@@ -19,8 +19,8 @@ def calculation_pipeline(
     add_task = add(num1=num1, num2=num2)
 
     subtract_task = subtract(
-        num1=multiply_task.outputs['product'],
-        num2=add_task.outputs['sum_result']
+        num1=multiply_task.output,
+        num2=add_task.output
     )
 
 if __name__ == '__main__':

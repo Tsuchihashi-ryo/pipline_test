@@ -1,4 +1,4 @@
-from kfp.dsl import component, Input, Output, Artifact
+from kfp.dsl import component
 
 @component(
     base_image='python:3.9',
@@ -6,9 +6,6 @@ from kfp.dsl import component, Input, Output, Artifact
 def multiply(
     num1: float,
     num2: float,
-    product: Output[Artifact],
-):
+) -> float:
     """Multiplies two numbers."""
-    product_value = num1 * num2
-    with open(product.path, 'w') as f:
-        f.write(str(product_value))
+    return num1 * num2
