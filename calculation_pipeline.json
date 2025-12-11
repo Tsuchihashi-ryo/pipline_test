@@ -20,14 +20,14 @@
         }
       }
     },
-    "comp-multiply": {
-      "executorLabel": "exec-multiply",
+    "comp-hypotenuse": {
+      "executorLabel": "exec-hypotenuse",
       "inputDefinitions": {
         "parameters": {
-          "num1": {
+          "side1": {
             "parameterType": "NUMBER_DOUBLE"
           },
-          "num2": {
+          "side2": {
             "parameterType": "NUMBER_DOUBLE"
           }
         }
@@ -40,8 +40,8 @@
         }
       }
     },
-    "comp-subtract": {
-      "executorLabel": "exec-subtract",
+    "comp-multiply": {
+      "executorLabel": "exec-multiply",
       "inputDefinitions": {
         "parameters": {
           "num1": {
@@ -83,6 +83,26 @@
           "image": "python:3.9"
         }
       },
+      "exec-hypotenuse": {
+        "container": {
+          "args": [
+            "--executor_input",
+            "{{$}}",
+            "--function_to_execute",
+            "hypotenuse"
+          ],
+          "command": [
+            "sh",
+            "-c",
+            "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location 'scipy'  &&  python3 -m pip install --quiet --no-warn-script-location 'kfp==2.15.2' '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"' && \"$0\" \"$@\"\n",
+            "sh",
+            "-ec",
+            "program_path=$(mktemp -d)\n\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\n_KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
+            "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import *\n\ndef hypotenuse(\n    side1: float,\n    side2: float,\n) -> float:\n    \"\"\"\n    Calculates the hypotenuse of a right triangle given its two sides.\n    This component demonstrates installing a third-party library (scipy).\n    \"\"\"\n    import numpy as np\n    # Using scipy.linalg.norm is equivalent to math.sqrt(side1**2 + side2**2)\n    # We use it here to demonstrate a scipy dependency.\n    hypotenuse_length = np.hypot(side1, side2)\n    return float(hypotenuse_length)\n\n"
+          ],
+          "image": "python:3.9"
+        }
+      },
       "exec-multiply": {
         "container": {
           "args": [
@@ -102,32 +122,12 @@
           ],
           "image": "python:3.9"
         }
-      },
-      "exec-subtract": {
-        "container": {
-          "args": [
-            "--executor_input",
-            "{{$}}",
-            "--function_to_execute",
-            "subtract"
-          ],
-          "command": [
-            "sh",
-            "-c",
-            "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location 'kfp==2.15.2' '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"' && \"$0\" \"$@\"\n",
-            "sh",
-            "-ec",
-            "program_path=$(mktemp -d)\n\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\n_KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
-            "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import *\n\ndef subtract(\n    num1: float,\n    num2: float,\n) -> float:\n    \"\"\"Subtracts two numbers.\"\"\"\n    return num1 - num2\n\n"
-          ],
-          "image": "python:3.9"
-        }
       }
     }
   },
   "pipelineInfo": {
-    "description": "A pipeline that multiplies and adds two numbers, then subtracts the results.",
-    "name": "calculation-pipeline"
+    "description": "A pipeline that multiplies and adds two numbers, then calculates the hypotenuse.",
+    "name": "calculation-hypotenuse-pipeline"
   },
   "root": {
     "dag": {
@@ -153,6 +153,37 @@
             "name": "add"
           }
         },
+        "hypotenuse": {
+          "cachingOptions": {
+            "enableCache": true
+          },
+          "componentRef": {
+            "name": "comp-hypotenuse"
+          },
+          "dependentTasks": [
+            "add",
+            "multiply"
+          ],
+          "inputs": {
+            "parameters": {
+              "side1": {
+                "taskOutputParameter": {
+                  "outputParameterKey": "Output",
+                  "producerTask": "multiply"
+                }
+              },
+              "side2": {
+                "taskOutputParameter": {
+                  "outputParameterKey": "Output",
+                  "producerTask": "add"
+                }
+              }
+            }
+          },
+          "taskInfo": {
+            "name": "hypotenuse"
+          }
+        },
         "multiply": {
           "cachingOptions": {
             "enableCache": true
@@ -172,37 +203,6 @@
           },
           "taskInfo": {
             "name": "multiply"
-          }
-        },
-        "subtract": {
-          "cachingOptions": {
-            "enableCache": true
-          },
-          "componentRef": {
-            "name": "comp-subtract"
-          },
-          "dependentTasks": [
-            "add",
-            "multiply"
-          ],
-          "inputs": {
-            "parameters": {
-              "num1": {
-                "taskOutputParameter": {
-                  "outputParameterKey": "Output",
-                  "producerTask": "multiply"
-                }
-              },
-              "num2": {
-                "taskOutputParameter": {
-                  "outputParameterKey": "Output",
-                  "producerTask": "add"
-                }
-              }
-            }
-          },
-          "taskInfo": {
-            "name": "subtract"
           }
         }
       }

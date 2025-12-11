@@ -2,11 +2,11 @@ from kfp.dsl import pipeline
 from kfp import compiler
 from components.multiply_component import multiply
 from components.add_component import add
-from components.subtract_component import subtract
+from components.hypotenuse_component import hypotenuse
 
 @pipeline(
-    name='calculation-pipeline',
-    description='A pipeline that multiplies and adds two numbers, then subtracts the results.'
+    name='calculation-hypotenuse-pipeline',
+    description='A pipeline that multiplies and adds two numbers, then calculates the hypotenuse.'
 )
 def calculation_pipeline(
     num1: float = 10,
@@ -18,9 +18,9 @@ def calculation_pipeline(
     multiply_task = multiply(num1=num1, num2=num2)
     add_task = add(num1=num1, num2=num2)
 
-    subtract_task = subtract(
-        num1=multiply_task.output,
-        num2=add_task.output
+    hypotenuse_task = hypotenuse(
+        side1=multiply_task.output,
+        side2=add_task.output
     )
 
 if __name__ == '__main__':
