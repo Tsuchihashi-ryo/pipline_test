@@ -13,29 +13,41 @@
         }
       },
       "outputDefinitions": {
-        "parameters": {
-          "Output": {
-            "parameterType": "NUMBER_DOUBLE"
+        "artifacts": {
+          "sum_artifact": {
+            "artifactType": {
+              "schemaTitle": "system.Artifact",
+              "schemaVersion": "0.0.1"
+            }
           }
         }
       }
     },
-    "comp-hypotenuse": {
-      "executorLabel": "exec-hypotenuse",
+    "comp-difference": {
+      "executorLabel": "exec-difference",
       "inputDefinitions": {
-        "parameters": {
-          "side1": {
-            "parameterType": "NUMBER_DOUBLE"
+        "artifacts": {
+          "num1_artifact": {
+            "artifactType": {
+              "schemaTitle": "system.Artifact",
+              "schemaVersion": "0.0.1"
+            }
           },
-          "side2": {
-            "parameterType": "NUMBER_DOUBLE"
+          "num2_artifact": {
+            "artifactType": {
+              "schemaTitle": "system.Artifact",
+              "schemaVersion": "0.0.1"
+            }
           }
         }
       },
       "outputDefinitions": {
-        "parameters": {
-          "Output": {
-            "parameterType": "NUMBER_DOUBLE"
+        "artifacts": {
+          "difference_artifact": {
+            "artifactType": {
+              "schemaTitle": "system.Artifact",
+              "schemaVersion": "0.0.1"
+            }
           }
         }
       }
@@ -53,9 +65,35 @@
         }
       },
       "outputDefinitions": {
-        "parameters": {
-          "Output": {
-            "parameterType": "NUMBER_DOUBLE"
+        "artifacts": {
+          "product_artifact": {
+            "artifactType": {
+              "schemaTitle": "system.Artifact",
+              "schemaVersion": "0.0.1"
+            }
+          }
+        }
+      }
+    },
+    "comp-sigmoid": {
+      "executorLabel": "exec-sigmoid",
+      "inputDefinitions": {
+        "artifacts": {
+          "input_artifact": {
+            "artifactType": {
+              "schemaTitle": "system.Artifact",
+              "schemaVersion": "0.0.1"
+            }
+          }
+        }
+      },
+      "outputDefinitions": {
+        "artifacts": {
+          "output_artifact": {
+            "artifactType": {
+              "schemaTitle": "system.Artifact",
+              "schemaVersion": "0.0.1"
+            }
           }
         }
       }
@@ -78,29 +116,29 @@
             "sh",
             "-ec",
             "program_path=$(mktemp -d)\n\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\n_KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
-            "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import *\n\ndef add(\n    num1: float,\n    num2: float,\n) -> float:\n    \"\"\"Adds two numbers.\"\"\"\n    return num1 + num2\n\n"
+            "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import *\n\ndef add(\n    num1: float,\n    num2: float,\n    sum_artifact: Output[Artifact],\n):\n    \"\"\"Adds two numbers and saves the result to an artifact.\"\"\"\n    total = num1 + num2\n    with open(sum_artifact.path, 'w') as f:\n        f.write(str(total))\n\n"
           ],
-          "image": "python:3.9"
+          "image": "gcr.io/YOUR_PROJECT_ID/pipeline-components:latest"
         }
       },
-      "exec-hypotenuse": {
+      "exec-difference": {
         "container": {
           "args": [
             "--executor_input",
             "{{$}}",
             "--function_to_execute",
-            "hypotenuse"
+            "difference"
           ],
           "command": [
             "sh",
             "-c",
-            "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location 'scipy'  &&  python3 -m pip install --quiet --no-warn-script-location 'kfp==2.15.2' '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"' && \"$0\" \"$@\"\n",
+            "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location 'kfp==2.15.2' '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"' && \"$0\" \"$@\"\n",
             "sh",
             "-ec",
             "program_path=$(mktemp -d)\n\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\n_KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
-            "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import *\n\ndef hypotenuse(\n    side1: float,\n    side2: float,\n) -> float:\n    \"\"\"\n    Calculates the hypotenuse of a right triangle given its two sides.\n    This component demonstrates installing a third-party library (scipy).\n    \"\"\"\n    import numpy as np\n    # Using scipy.linalg.norm is equivalent to math.sqrt(side1**2 + side2**2)\n    # We use it here to demonstrate a scipy dependency.\n    hypotenuse_length = np.hypot(side1, side2)\n    return float(hypotenuse_length)\n\n"
+            "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import *\n\ndef difference(\n    num1_artifact: Input[Artifact],\n    num2_artifact: Input[Artifact],\n    difference_artifact: Output[Artifact],\n):\n    \"\"\"Calculates the difference between two numbers passed as artifacts.\"\"\"\n    with open(num1_artifact.path, 'r') as f:\n        num1 = float(f.read())\n    with open(num2_artifact.path, 'r') as f:\n        num2 = float(f.read())\n\n    diff = num1 - num2\n\n    with open(difference_artifact.path, 'w') as f:\n        f.write(str(diff))\n\n"
           ],
-          "image": "python:3.9"
+          "image": "gcr.io/YOUR_PROJECT_ID/pipeline-components:latest"
         }
       },
       "exec-multiply": {
@@ -118,16 +156,36 @@
             "sh",
             "-ec",
             "program_path=$(mktemp -d)\n\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\n_KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
-            "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import *\n\ndef multiply(\n    num1: float,\n    num2: float,\n) -> float:\n    \"\"\"Multiplies two numbers.\"\"\"\n    return num1 * num2\n\n"
+            "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import *\n\ndef multiply(\n    num1: float,\n    num2: float,\n    product_artifact: Output[Artifact],\n):\n    \"\"\"Multiplies two numbers and saves the result to an artifact.\"\"\"\n    product = num1 * num2\n    with open(product_artifact.path, 'w') as f:\n        f.write(str(product))\n\n"
           ],
-          "image": "python:3.9"
+          "image": "gcr.io/YOUR_PROJECT_ID/pipeline-components:latest"
+        }
+      },
+      "exec-sigmoid": {
+        "container": {
+          "args": [
+            "--executor_input",
+            "{{$}}",
+            "--function_to_execute",
+            "sigmoid"
+          ],
+          "command": [
+            "sh",
+            "-c",
+            "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location 'kfp==2.15.2' '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"' && \"$0\" \"$@\"\n",
+            "sh",
+            "-ec",
+            "program_path=$(mktemp -d)\n\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\n_KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
+            "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import *\n\ndef sigmoid(\n    input_artifact: Input[Artifact],\n    output_artifact: Output[Artifact],\n):\n    \"\"\"\n    Applies the sigmoid function to a number from an artifact.\n    This component runs in a custom Docker container with scipy pre-installed.\n    \"\"\"\n    from scipy.special import expit\n\n    with open(input_artifact.path, 'r') as f:\n        value = float(f.read())\n\n    sigmoid_value = expit(value)\n\n    with open(output_artifact.path, 'w') as f:\n        f.write(str(sigmoid_value))\n\n"
+          ],
+          "image": "gcr.io/YOUR_PROJECT_ID/pipeline-components:latest"
         }
       }
     }
   },
   "pipelineInfo": {
-    "description": "A pipeline that multiplies and adds two numbers, then calculates the hypotenuse.",
-    "name": "calculation-hypotenuse-pipeline"
+    "description": "A pipeline that multiplies and adds two numbers, calculates the difference, and then applies the sigmoid function.",
+    "name": "calculation-difference-sigmoid-pipeline"
   },
   "root": {
     "dag": {
@@ -153,35 +211,35 @@
             "name": "add"
           }
         },
-        "hypotenuse": {
+        "difference": {
           "cachingOptions": {
             "enableCache": true
           },
           "componentRef": {
-            "name": "comp-hypotenuse"
+            "name": "comp-difference"
           },
           "dependentTasks": [
             "add",
             "multiply"
           ],
           "inputs": {
-            "parameters": {
-              "side1": {
-                "taskOutputParameter": {
-                  "outputParameterKey": "Output",
+            "artifacts": {
+              "num1_artifact": {
+                "taskOutputArtifact": {
+                  "outputArtifactKey": "product_artifact",
                   "producerTask": "multiply"
                 }
               },
-              "side2": {
-                "taskOutputParameter": {
-                  "outputParameterKey": "Output",
+              "num2_artifact": {
+                "taskOutputArtifact": {
+                  "outputArtifactKey": "sum_artifact",
                   "producerTask": "add"
                 }
               }
             }
           },
           "taskInfo": {
-            "name": "hypotenuse"
+            "name": "difference"
           }
         },
         "multiply": {
@@ -203,6 +261,30 @@
           },
           "taskInfo": {
             "name": "multiply"
+          }
+        },
+        "sigmoid": {
+          "cachingOptions": {
+            "enableCache": true
+          },
+          "componentRef": {
+            "name": "comp-sigmoid"
+          },
+          "dependentTasks": [
+            "difference"
+          ],
+          "inputs": {
+            "artifacts": {
+              "input_artifact": {
+                "taskOutputArtifact": {
+                  "outputArtifactKey": "difference_artifact",
+                  "producerTask": "difference"
+                }
+              }
+            }
+          },
+          "taskInfo": {
+            "name": "sigmoid"
           }
         }
       }

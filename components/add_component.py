@@ -1,11 +1,13 @@
-from kfp.dsl import component
+from kfp.dsl import component, Output, Artifact
+from config import BASE_IMAGE
 
-@component(
-    base_image='python:3.9',
-)
+@component(base_image=BASE_IMAGE)
 def add(
     num1: float,
     num2: float,
-) -> float:
-    """Adds two numbers."""
-    return num1 + num2
+    sum_artifact: Output[Artifact],
+):
+    """Adds two numbers and saves the result to an artifact."""
+    total = num1 + num2
+    with open(sum_artifact.path, 'w') as f:
+        f.write(str(total))

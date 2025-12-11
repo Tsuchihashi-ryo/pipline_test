@@ -4,7 +4,8 @@
 1. 2つの数値を入力として受け取ります。
 2. 2つの数値を乗算します。
 3. 2つの数値を加算します。
-4. 乗算結果と加算結果を直角三角形の2辺とみなし、`scipy`ライブラリを使用して斜辺の長さを計算します。
+4. 乗算結果と加算結果の差を計算します。
+5. 最後に、その差を`scipy`ライブラリの`sigmoid`関数に入力し、最終結果を得ます。
 
 ## 前提条件
 
@@ -14,20 +15,75 @@
 
 ## セットアップ
 
-1.  **依存関係のインストール:**
-    ```bash
-    pip install -r requirements.txt
-    ```
+### 1. ローカル環境のセットアップ
 
-2.  **パイプラインの構成:**
-    `run.py`ファイルを開き、プレースホルダーの値を独自のものに置き換えます。
-    ```python
-    # --- ユーザー構成 ---
-    PROJECT_ID = "your-gcp-project-id"  # <-- 置き換えてください
-    REGION = "your-gcp-region"      # <-- 置き換えてください (例: "us-central1")
-    PIPELINE_ROOT = "gs://your-gcs-bucket/pipeline-root" # <-- 置き換えてください
-    # --------------------------
-    ```
+パイプラインをコンパイルしたり実行したりするために、ローカルマシンに依存関係をインストールします。
+```bash
+pip install -r requirements.txt
+```
+
+### 2. Dockerコンテナイメージの準備 (コンポーネント実行環境)
+
+このパイプラインは、各コンポーネントを実行するためにカスタムDockerイメージを使用します。これにより、依存関係が事前にインストールされ、実行が高速かつ信頼性の高いものになります。
+
+#### a. Artifact Registry APIの有効化
+```bash
+gcloud services enable artifactregistry.googleapis.com
+```
+
+#### b. Dockerリポジトリの作成
+Google CloudプロジェクトでDockerイメージをホストするためのリポジトリを作成します。
+```bash
+export REPO_NAME="pipeline-components"
+export GCP_REGION="<YOUR_REGION>" # 例: us-central1
+gcloud artifacts repositories create ${REPO_NAME} \
+  --repository-format=docker \
+  --location=${GCP_REGION} \
+  --description="Repository for pipeline component images"
+```
+
+#### c. Docker認証の設定
+gcloudを使用して、Artifact RegistryにDockerイメージをプッシュできるように認証を設定します。
+```bash
+gcloud auth configure-docker ${GCP_REGION}-docker.pkg.dev
+```
+
+#### d. Dockerイメージのビルドとプッシュ
+プロジェクトのルートディレクトリ（`Dockerfile`がある場所）で、以下のコマンドを実行してイメージをビルドし、Artifact Registryにプッシュします。
+```bash
+export GCP_PROJECT_ID="<YOUR_PROJECT_ID>"
+export IMAGE_URI="${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT_ID}/${REPO_NAME}/pipeline-base:latest"
+
+docker build -t ${IMAGE_URI} .
+docker push ${IMAGE_URI}
+```
+成功すると、カスタムイメージがArtifact Registryに保存されます。
+
+### 3. パイプラインのベースイメージを設定
+
+次に、パイプラインのすべてのコンポーネントが、先ほどプッシュしたカスタムイメージを使用するように設定します。
+
+`config.py` ファイルをテキストエディタで開き、`BASE_IMAGE` の値を、上で作成した `IMAGE_URI`（例: `us-central1-docker.pkg.dev/my-gcp-project/pipeline-components/pipeline-base:latest`）に置き換えてください。
+
+**変更前:**
+`BASE_IMAGE = 'gcr.io/YOUR_PROJECT_ID/pipeline-components:latest'`
+
+**変更後 (例):**
+`BASE_IMAGE = 'us-central1-docker.pkg.dev/my-gcp-project/pipeline-components/pipeline-base:latest'`
+
+このファイルを変更するだけで、パイプラインのすべてのコンポーネントが使用するDockerイメージを一元的に管理できます。
+
+
+### 4. パイプライン実行スクリプトの構成
+
+`run.py`ファイルを開き、パイプライン実行のためのプレースホルダーの値を独自のものに置き換えます。
+```python
+# --- ユーザー構成 ---
+PROJECT_ID = "your-gcp-project-id"  # <-- 置き換えてください
+REGION = "your-gcp-region"      # <-- 置き換えてください (例: "us-central1")
+PIPELINE_ROOT = "gs://your-gcs-bucket/pipeline-root" # <-- 置き換えてください
+# --------------------------
+```
 
 ## パイプラインの実行
 
